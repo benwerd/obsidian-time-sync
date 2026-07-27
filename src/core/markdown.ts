@@ -133,8 +133,8 @@ export function appendDailySession(content: string, session: Session): string {
   return lines.join("\n");
 }
 
-const INVOICES_HEADER = "| Date | Hours | Sessions total | Note |";
-const INVOICES_DIVIDER = "| ---- | ----- | -------------- | ---- |";
+const INVOICES_HEADER = "| Date | Billable hours | Sessions total | Note |";
+const INVOICES_DIVIDER = "| ---- | -------------- | -------------- | ---- |";
 const INVOICE_COLUMNS = tableCellCount(INVOICES_HEADER);
 
 export interface InvoiceRecord {

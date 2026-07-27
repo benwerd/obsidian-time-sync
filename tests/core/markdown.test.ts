@@ -89,7 +89,7 @@ describe("createProjectFile", () => {
     expect(out).toContain("# ProjectX");
     expect(out).toContain("## Invoices");
     expect(out).not.toContain("## Sessions");
-    expect(out).toContain("| Date | Hours | Sessions total | Note |");
+    expect(out).toContain("| Date | Billable hours | Sessions total | Note |");
   });
 });
 
@@ -189,7 +189,7 @@ describe("appendInvoice", () => {
   it("creates the section and table when missing", () => {
     const out = appendInvoice("# P\n", invoice);
     expect(out).toContain("## Invoices");
-    expect(out).toContain("| Date | Hours | Sessions total | Note |");
+    expect(out).toContain("| Date | Billable hours | Sessions total | Note |");
     expect(out).toContain("| 2026-07-15 | 13h |");
   });
 
