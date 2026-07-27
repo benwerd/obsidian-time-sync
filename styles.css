@@ -1,0 +1,22 @@
+.time-sync-view .time-sync-picker input {
+  width: 100%;
+}
+
+.time-sync-clock {
+  font-size: 2em;
+  text-align: center;
+  margin: 0.5em 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.time-sync-button {
+  width: 100%;
+  margin-bottom: 1em;
+}
+
+.time-sync-project-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
