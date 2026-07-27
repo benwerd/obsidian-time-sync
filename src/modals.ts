@@ -1,4 +1,4 @@
-import { App, Modal, Setting, SuggestModal } from "obsidian";
+import { App, Modal, SuggestModal } from "obsidian";
 import { formatDuration } from "./core/time";
 
 /** Shown on Stop. Cancel leaves the timer running. */
@@ -22,19 +22,21 @@ export class StopModal extends Modal {
     contentEl.createEl("p", {
       text: `Raw: ${formatDuration(this.rawMinutes)} · Billed: ${formatDuration(this.billedMinutes)}`,
     });
-    new Setting(contentEl).setName("What did you do?").addTextArea((t) => {
-      t.setPlaceholder("Optional session note");
-      t.onChange((v) => (this.note = v));
-      t.inputEl.rows = 4;
+    contentEl.createEl("label", { text: "What did you do?", cls: "time-sync-stop-label" });
+    const textarea = contentEl.createEl("textarea", {
+      cls: "time-sync-stop-note",
+      attr: { placeholder: "Optional session note", rows: "4" },
     });
-    new Setting(contentEl)
-      .addButton((b) =>
-        b.setButtonText("Save & stop").setCta().onClick(() => {
-          this.close();
-          this.onSubmit(this.note);
-        })
-      )
-      .addButton((b) => b.setButtonText("Cancel (keep running)").onClick(() => this.close()));
+    textarea.addEventListener("input", () => (this.note = textarea.value));
+    const buttons = contentEl.createDiv({ cls: "modal-button-container" });
+    const save = buttons.createEl("button", { text: "Save & stop", cls: "mod-cta" });
+    save.onclick = () => {
+      this.close();
+      this.onSubmit(this.note);
+    };
+    const cancel = buttons.createEl("button", { text: "Cancel (keep running)" });
+    cancel.onclick = () => this.close();
+    textarea.focus();
   }
 
   onClose() {
@@ -55,14 +57,14 @@ export class ConfirmModal extends Modal {
 
   onOpen() {
     this.contentEl.createEl("p", { text: this.message });
-    new Setting(this.contentEl)
-      .addButton((b) =>
-        b.setButtonText("Confirm").setCta().onClick(() => {
-          this.close();
-          this.onConfirm();
-        })
-      )
-      .addButton((b) => b.setButtonText("Cancel").onClick(() => this.close()));
+    const buttons = this.contentEl.createDiv({ cls: "modal-button-container" });
+    const confirm = buttons.createEl("button", { text: "Confirm", cls: "mod-cta" });
+    confirm.onclick = () => {
+      this.close();
+      this.onConfirm();
+    };
+    const cancel = buttons.createEl("button", { text: "Cancel" });
+    cancel.onclick = () => this.close();
   }
 
   onClose() {
