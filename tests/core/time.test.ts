@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { roundUpMinutes } from "../../src/core/time";
+import { roundUpMinutes, formatDuration, formatHours, formatClock, dateStr, timeStr } from "../../src/core/time";
 
 describe("roundUpMinutes", () => {
   it("passes raw minutes through when rounding is off", () => {
@@ -28,4 +28,28 @@ describe("roundUpMinutes", () => {
     expect(roundUpMinutes(0, "30")).toBe(0);
     expect(roundUpMinutes(0, "60")).toBe(0);
   });
+});
+
+describe("formatDuration", () => {
+  it("formats minutes only", () => expect(formatDuration(45)).toBe("45m"));
+  it("formats whole hours", () => expect(formatDuration(120)).toBe("2h"));
+  it("formats hours and minutes", () => expect(formatDuration(75)).toBe("1h 15m"));
+  it("formats zero", () => expect(formatDuration(0)).toBe("0m"));
+});
+
+describe("formatHours", () => {
+  it("formats decimal hours", () => expect(formatHours(90)).toBe("1.5h"));
+  it("trims trailing zeros", () => expect(formatHours(120)).toBe("2h"));
+  it("rounds to two decimals", () => expect(formatHours(50)).toBe("0.83h"));
+});
+
+describe("formatClock", () => {
+  it("formats h:mm:ss", () => expect(formatClock(3_723_000)).toBe("1:02:03"));
+  it("formats zero", () => expect(formatClock(0)).toBe("0:00:00"));
+});
+
+describe("date helpers", () => {
+  const d = new Date(2026, 6, 27, 9, 5); // July 27 2026, 09:05 local
+  it("dateStr is YYYY-MM-DD", () => expect(dateStr(d)).toBe("2026-07-27"));
+  it("timeStr is HH:MM", () => expect(timeStr(d)).toBe("09:05"));
 });
