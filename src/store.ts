@@ -20,16 +20,20 @@ export class VaultStore {
     return normalizePath(`${this.getSettings().baseFolder}/Projects`);
   }
 
+  private projectFolder(name: string): string {
+    return normalizePath(`${this.projectsFolder()}/${sanitizeProjectName(name)}`);
+  }
+
   private projectPath(name: string): string {
-    return normalizePath(`${this.projectsFolder()}/${sanitizeProjectName(name)}.md`);
+    return normalizePath(`${this.projectFolder(name)}/${sanitizeProjectName(name)}.md`);
   }
 
   async listProjects(): Promise<string[]> {
     const folder = this.app.vault.getAbstractFileByPath(this.projectsFolder());
     if (!(folder instanceof TFolder)) return [];
     return folder.children
-      .filter((f): f is TFile => f instanceof TFile && f.extension === "md")
-      .map((f) => f.basename)
+      .filter((f): f is TFolder => f instanceof TFolder)
+      .map((f) => f.name)
       .sort();
   }
 
@@ -48,7 +52,7 @@ export class VaultStore {
     const path = this.projectPath(name);
     const existing = this.app.vault.getAbstractFileByPath(path);
     if (existing instanceof TFile) return existing;
-    await this.ensureFolder(this.projectsFolder());
+    await this.ensureFolder(this.projectFolder(name));
     return this.app.vault.create(path, createProjectFile(sanitizeProjectName(name), dateStr(new Date())));
   }
 
@@ -75,7 +79,7 @@ export class VaultStore {
   }
 
   private async appendDailyLog(name: string, session: Session): Promise<void> {
-    const folder = normalizePath(`${this.projectsFolder()}/${sanitizeProjectName(name)}/Daily`);
+    const folder = normalizePath(`${this.projectFolder(name)}/Daily`);
     await this.ensureFolder(folder);
     const path = normalizePath(`${folder}/${session.date}.md`);
     const line = dailyLogLine(session);

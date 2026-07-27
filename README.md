@@ -43,11 +43,13 @@ Everything lives under one folder in your vault — `Time Tracking` by default, 
 ```
 Time Tracking/
 └── Projects/
-    ├── ProjectX.md              ← one note per project
     └── ProjectX/
+        ├── ProjectX.md          ← the project's main note
         └── Daily/
-            └── 2026-07-27.md    ← one log note per project per day
+            └── 2026-07-27.md    ← one log note per day
 ```
+
+Each project is a self-contained folder: its main note and its daily logs travel together, so you can move, link, or archive a whole project as one unit.
 
 ### The project file
 
@@ -101,7 +103,7 @@ Two small rules of the road:
 
 ### How data is read back
 
-The plugin reads, never guesses: the project dropdown is simply the list of notes in `Time Tracking/Projects/`, and the uninvoiced totals come straight from each note's frontmatter. That means the files are safely editable by hand — fix a typo in a note, add tags, link the project file from anywhere. (If you hand-edit `uninvoiced_minutes`, the plugin will believe you — that's a feature.) The active timer itself (project + start time) is stored in the plugin's own settings file, not in your notes, so a half-finished session never litters your vault.
+The plugin reads, never guesses: the project dropdown is simply the list of project folders in `Time Tracking/Projects/`, and the uninvoiced totals come straight from each project note's frontmatter. That means the files are safely editable by hand — fix a typo in a note, add tags, link the project file from anywhere. (If you hand-edit `uninvoiced_minutes`, the plugin will believe you — that's a feature.) The active timer itself (project + start time) is stored in the plugin's own settings file, not in your notes, so a half-finished session never litters your vault.
 
 ## Settings
 
