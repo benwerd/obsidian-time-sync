@@ -52,7 +52,7 @@ export class TimeSyncSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Round invoice totals up to")
-      .setDesc("Applied to a project's uninvoiced total when you mark an invoice point. Lets you log sessions unrounded but round up invoices.")
+      .setDesc("Applied to a project's uninvoiced total when you save an invoice. Lets you log sessions unrounded but round up invoices.")
       .addDropdown((d) =>
         d
           .addOption("none", "No rounding")

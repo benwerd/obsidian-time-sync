@@ -81,6 +81,9 @@ export function createProjectFile(name: string, created: string): string {
     "",
     "## Invoices",
     "",
+    INVOICES_HEADER,
+    INVOICES_DIVIDER,
+    "",
   ].join("\n");
 }
 
@@ -130,28 +133,52 @@ export function appendDailySession(content: string, session: Session): string {
   return lines.join("\n");
 }
 
-export function appendInvoice(content: string, date: string, hours: string): string {
-  const line = `- ${date}: ${hours}`;
+const INVOICES_HEADER = "| Date | Hours | Sessions total | Note |";
+const INVOICES_DIVIDER = "| ---- | ----- | -------------- | ---- |";
+const INVOICE_COLUMNS = tableCellCount(INVOICES_HEADER);
+
+export interface InvoiceRecord {
+  date: string;
+  /** minutes actually invoiced, after invoice rounding */
+  invoicedMinutes: number;
+  /** accumulated billed session minutes before invoice rounding */
+  sessionsTotalMinutes: number;
+  note: string;
+}
+
+function invoiceRow(r: InvoiceRecord): string {
+  const note = r.note.replace(/\n/g, " ").replace(/\|/g, "\\|");
+  return `| ${r.date} | ${formatHours(r.invoicedMinutes)} | ${formatHours(r.sessionsTotalMinutes)} | ${note} |`;
+}
+
+export function appendInvoice(content: string, invoice: InvoiceRecord): string {
   const lines = content.split("\n");
-  const headerIdx = lines.findIndex((l) => l.trim() === "## Invoices");
+  let headerIdx = -1;
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (lines[i].trim() === INVOICES_HEADER && lines[i + 1].trim() === INVOICES_DIVIDER) {
+      headerIdx = i;
+      break;
+    }
+  }
   if (headerIdx === -1) {
-    return content.replace(/\n*$/, "\n") + ["", "## Invoices", "", line].join("\n") + "\n";
+    const table = [INVOICES_HEADER, INVOICES_DIVIDER, invoiceRow(invoice)];
+    const sectionIdx = lines.findIndex((l) => l.trim() === "## Invoices");
+    if (sectionIdx === -1) {
+      return content.replace(/\n*$/, "\n") + ["", "## Invoices", "", ...table].join("\n") + "\n";
+    }
+    lines.splice(sectionIdx + 1, 0, "", ...table);
+    return lines.join("\n");
   }
-  let lastIdx = headerIdx;
-  for (let i = headerIdx + 1; i < lines.length; i++) {
+  let lastRowIdx = headerIdx + 1;
+  for (let i = headerIdx + 2; i < lines.length; i++) {
     const t = lines[i].trim();
-    if (t.startsWith("- ")) lastIdx = i;
-    else if (t.startsWith("## ")) break;
+    if (t.startsWith("|") && tableCellCount(t) === INVOICE_COLUMNS) lastRowIdx = i;
+    else break;
   }
-  lines.splice(lastIdx + 1, 0, line);
+  lines.splice(lastRowIdx + 1, 0, invoiceRow(invoice));
   return lines.join("\n");
 }
 
 export function sanitizeProjectName(name: string): string {
   return name.replace(/[\\/:#^\[\]|?*]/g, "").trim();
-}
-
-export function invoiceHoursLabel(rawMinutes: number, billedMinutes: number): string {
-  const billed = formatHours(billedMinutes);
-  return rawMinutes === billedMinutes ? billed : `${billed} (raw ${formatHours(rawMinutes)})`;
 }

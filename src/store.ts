@@ -5,7 +5,6 @@ import {
   appendInvoice,
   createDailyFile,
   createProjectFile,
-  invoiceHoursLabel,
   parseFrontmatter,
   sanitizeProjectName,
   setFrontmatterFields,
@@ -101,18 +100,18 @@ export class VaultStore {
     );
   }
 
-  /** Records an invoice point (rounded up per the invoice rounding setting) and resets the clock. Returns the invoiced minutes. */
-  async markInvoice(name: string, date: string): Promise<number> {
+  /** Saves an invoice (rounded up per the invoice rounding setting) and resets the uninvoiced total. Returns the invoiced minutes. */
+  async markInvoice(name: string, date: string, note: string): Promise<number> {
     const file = await this.getOrCreateProjectFile(name);
-    let billed = 0;
+    let invoiced = 0;
     await this.app.vault.process(file, (content) => {
-      const raw = this.readUninvoiced(content);
-      billed = roundUpMinutes(raw, this.getSettings().invoiceRounding);
-      return setFrontmatterFields(appendInvoice(content, date, invoiceHoursLabel(raw, billed)), {
-        uninvoiced_minutes: 0,
-        last_invoice: date,
-      });
+      const total = this.readUninvoiced(content);
+      invoiced = roundUpMinutes(total, this.getSettings().invoiceRounding);
+      return setFrontmatterFields(
+        appendInvoice(content, { date, invoicedMinutes: invoiced, sessionsTotalMinutes: total, note }),
+        { uninvoiced_minutes: 0, last_invoice: date }
+      );
     });
-    return billed;
+    return invoiced;
   }
 }

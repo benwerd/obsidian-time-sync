@@ -1,5 +1,5 @@
 import { App, Modal, SuggestModal } from "obsidian";
-import { formatDuration } from "./core/time";
+import { formatDuration, formatHours } from "./core/time";
 
 /** Shown on Stop. Cancel leaves the timer running. */
 export class StopModal extends Modal {
@@ -45,31 +45,49 @@ export class StopModal extends Modal {
   }
 }
 
-export class ConfirmModal extends Modal {
+/** Shown when saving an invoice. Collects an optional note; Cancel changes nothing. */
+export class InvoiceModal extends Modal {
+  private note = "";
+
   constructor(
     app: App,
-    private title: string,
-    private message: string,
-    private ctaText: string,
-    private onConfirm: () => void,
+    private project: string,
+    private sessionsTotalMinutes: number,
+    private invoicedMinutes: number,
+    private onSubmit: (note: string) => void,
     private onDismiss?: () => void
   ) {
     super(app);
   }
 
   onOpen() {
-    this.contentEl.createEl("h3", { text: this.title });
-    for (const paragraph of this.message.split("\n")) {
-      this.contentEl.createEl("p", { text: paragraph });
-    }
-    const buttons = this.contentEl.createDiv({ cls: "modal-button-container" });
-    const confirm = buttons.createEl("button", { text: this.ctaText, cls: "mod-cta" });
-    confirm.onclick = () => {
+    const { contentEl } = this;
+    contentEl.createEl("h3", { text: `Save an invoice for ${this.project}?` });
+    contentEl.createEl("p", {
+      text: "Time Sync doesn't create the invoice document itself — it saves the totals and context you'll need when you write one.",
+    });
+    const rounded =
+      this.invoicedMinutes !== this.sessionsTotalMinutes
+        ? ` (${formatHours(this.sessionsTotalMinutes)} of billed sessions, rounded up per your invoice rounding setting)`
+        : "";
+    contentEl.createEl("p", {
+      text: `This records ${formatHours(this.invoicedMinutes)}${rounded} in ${this.project}'s Invoices table and resets its uninvoiced total to zero, so new sessions count toward your next invoice.`,
+    });
+    contentEl.createEl("label", { text: "Notes for this invoice", cls: "time-sync-stop-label" });
+    const textarea = contentEl.createEl("textarea", {
+      cls: "time-sync-stop-note",
+      attr: { placeholder: "Optional — invoice number, period covered, where you sent it…", rows: "3" },
+    });
+    textarea.addEventListener("input", () => (this.note = textarea.value));
+    const buttons = contentEl.createDiv({ cls: "modal-button-container" });
+    const save = buttons.createEl("button", { text: "Save invoice and reset totals", cls: "mod-cta" });
+    save.onclick = () => {
       this.close();
-      this.onConfirm();
+      this.onSubmit(this.note);
     };
     const cancel = buttons.createEl("button", { text: "Cancel" });
     cancel.onclick = () => this.close();
+    textarea.focus();
   }
 
   onClose() {

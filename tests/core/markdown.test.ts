@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseFrontmatter, setFrontmatterFields, createProjectFile, createDailyFile, appendDailySession, appendInvoice, sanitizeProjectName, invoiceHoursLabel } from "../../src/core/markdown";
+import { parseFrontmatter, setFrontmatterFields, createProjectFile, createDailyFile, appendDailySession, appendInvoice, sanitizeProjectName } from "../../src/core/markdown";
 import { Session } from "../../src/core/types";
 
 const SAMPLE = `---
@@ -89,6 +89,7 @@ describe("createProjectFile", () => {
     expect(out).toContain("# ProjectX");
     expect(out).toContain("## Invoices");
     expect(out).not.toContain("## Sessions");
+    expect(out).toContain("| Date | Hours | Sessions total | Note |");
   });
 });
 
@@ -172,18 +173,34 @@ describe("appendDailySession", () => {
 });
 
 describe("appendInvoice", () => {
-  it("appends an invoice line in order", () => {
-    let out = appendInvoice(createProjectFile("P", "2026-07-27"), "2026-07-01", "12.5h");
-    out = appendInvoice(out, "2026-07-27", "3h");
-    expect(out).toContain("- 2026-07-01: 12.5h");
-    expect(out).toContain("- 2026-07-27: 3h");
-    expect(out.indexOf("2026-07-01")).toBeLessThan(out.indexOf("- 2026-07-27: 3h"));
+  const invoice = { date: "2026-07-15", invoicedMinutes: 780, sessionsTotalMinutes: 750, note: "Invoice #42" };
+
+  it("appends a table row under the Invoices table", () => {
+    const out = appendInvoice(createProjectFile("P", "2026-07-27"), invoice);
+    expect(out).toContain("| 2026-07-15 | 13h | 12.5h | Invoice #42 |");
   });
 
-  it("creates the Invoices section if missing", () => {
-    const out = appendInvoice("# P\n", "2026-07-27", "1h");
+  it("keeps rows in insertion order", () => {
+    let out = appendInvoice(createProjectFile("P", "2026-07-27"), invoice);
+    out = appendInvoice(out, { ...invoice, date: "2026-08-01", note: "Invoice #43" });
+    expect(out.indexOf("Invoice #42")).toBeLessThan(out.indexOf("Invoice #43"));
+  });
+
+  it("creates the section and table when missing", () => {
+    const out = appendInvoice("# P\n", invoice);
     expect(out).toContain("## Invoices");
-    expect(out).toContain("- 2026-07-27: 1h");
+    expect(out).toContain("| Date | Hours | Sessions total | Note |");
+    expect(out).toContain("| 2026-07-15 | 13h |");
+  });
+
+  it("recreates the table under an existing empty Invoices heading", () => {
+    const out = appendInvoice("# P\n\n## Invoices\n", invoice);
+    expect(out.indexOf("## Invoices")).toBeLessThan(out.indexOf("| 2026-07-15 |"));
+  });
+
+  it("escapes pipes and newlines in notes", () => {
+    const out = appendInvoice(createProjectFile("P", "2026-07-27"), { ...invoice, note: "a|b\nc" });
+    expect(out).toContain("a\\|b c");
   });
 });
 
@@ -193,14 +210,5 @@ describe("sanitizeProjectName", () => {
   });
   it("trims whitespace", () => {
     expect(sanitizeProjectName("  ProjectX  ")).toBe("ProjectX");
-  });
-});
-
-describe("invoiceHoursLabel", () => {
-  it("shows just the hours when no rounding happened", () => {
-    expect(invoiceHoursLabel(90, 90)).toBe("1.5h");
-  });
-  it("shows billed hours with raw in parens when rounding happened", () => {
-    expect(invoiceHoursLabel(156, 180)).toBe("3h (raw 2.6h)");
   });
 });

@@ -2,7 +2,7 @@ import { ItemView, Notice, WorkspaceLeaf } from "obsidian";
 import type TimeSyncPlugin from "./main";
 import { dateStr, formatClock, formatHours, roundUpMinutes } from "./core/time";
 import { sanitizeProjectName } from "./core/markdown";
-import { ConfirmModal } from "./modals";
+import { InvoiceModal } from "./modals";
 
 export const VIEW_TYPE_TIME_SYNC = "time-sync-view";
 
@@ -111,17 +111,14 @@ export class TrackerView extends ItemView {
       invoiceBtn.onclick = () => {
         invoiceBtn.disabled = true;
         const billed = roundUpMinutes(row.minutes, this.plugin.settings.invoiceRounding);
-        const rounded =
-          billed !== row.minutes ? ` (rounded up from ${formatHours(row.minutes)})` : "";
-        new ConfirmModal(
+        new InvoiceModal(
           this.app,
-          `Save an invoice point for ${row.name}?`,
-          `This records ${formatHours(billed)}${rounded} as invoiced, adding a dated line to the Invoices list in ${row.name}'s project note.\n` +
-            `${row.name}'s uninvoiced total then resets to zero, so new sessions count toward your next invoice.`,
-          "Save invoice point",
-          async () => {
-            const minutes = await this.plugin.store.markInvoice(row.name, dateStr(new Date()));
-            new Notice(`Invoiced ${formatHours(minutes)} for ${row.name}.`);
+          row.name,
+          row.minutes,
+          billed,
+          async (note) => {
+            const minutes = await this.plugin.store.markInvoice(row.name, dateStr(new Date()), note.trim());
+            new Notice(`Saved a ${formatHours(minutes)} invoice for ${row.name}.`);
             await this.render();
           },
           () => {
