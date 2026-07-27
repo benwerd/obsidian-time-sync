@@ -1,3 +1,8 @@
 node_modules/
 main.js
 *.map
+
+# Local working notes and AI-assistant files — not part of the plugin
+docs/superpowers/
+.claude/
+CLAUDE.md
