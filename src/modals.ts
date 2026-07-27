@@ -10,7 +10,8 @@ export class StopModal extends Modal {
     private project: string,
     private rawMinutes: number,
     private billedMinutes: number,
-    private onSubmit: (note: string) => void
+    private onSubmit: (note: string) => void,
+    private onDismiss?: () => void
   ) {
     super(app);
   }
@@ -38,11 +39,17 @@ export class StopModal extends Modal {
 
   onClose() {
     this.contentEl.empty();
+    this.onDismiss?.();
   }
 }
 
 export class ConfirmModal extends Modal {
-  constructor(app: App, private message: string, private onConfirm: () => void) {
+  constructor(
+    app: App,
+    private message: string,
+    private onConfirm: () => void,
+    private onDismiss?: () => void
+  ) {
     super(app);
   }
 
@@ -60,6 +67,7 @@ export class ConfirmModal extends Modal {
 
   onClose() {
     this.contentEl.empty();
+    this.onDismiss?.();
   }
 }
 

@@ -63,13 +63,12 @@ export class VaultStore {
 
   async recordSession(name: string, session: Session): Promise<void> {
     const file = await this.getOrCreateProjectFile(name);
-    let content = await this.app.vault.read(file);
-    const uninvoiced = this.readUninvoiced(content);
-    content = appendSession(content, session);
-    content = setFrontmatterFields(content, {
-      uninvoiced_minutes: uninvoiced + session.billedMinutes,
+    await this.app.vault.process(file, (content) => {
+      const uninvoiced = this.readUninvoiced(content);
+      return setFrontmatterFields(appendSession(content, session), {
+        uninvoiced_minutes: uninvoiced + session.billedMinutes,
+      });
     });
-    await this.app.vault.modify(file, content);
     if (this.getSettings().dailyLog) {
       await this.appendDailyLog(name, session);
     }
@@ -82,8 +81,7 @@ export class VaultStore {
     const line = dailyLogLine(session);
     const existing = this.app.vault.getAbstractFileByPath(path);
     if (existing instanceof TFile) {
-      const content = await this.app.vault.read(existing);
-      await this.app.vault.modify(existing, content.replace(/\n*$/, "\n") + line + "\n");
+      await this.app.vault.process(existing, (content) => content.replace(/\n*$/, "\n") + line + "\n");
     } else {
       await this.app.vault.create(path, `# ${session.date}\n\n${line}\n`);
     }
@@ -96,22 +94,24 @@ export class VaultStore {
   }
 
   async listUninvoiced(): Promise<{ name: string; minutes: number }[]> {
-    const result: { name: string; minutes: number }[] = [];
-    for (const name of await this.listProjects()) {
-      result.push({ name, minutes: await this.getUninvoicedMinutes(name) });
-    }
-    return result;
+    const names = await this.listProjects();
+    return Promise.all(
+      names.map(async (name) => ({ name, minutes: await this.getUninvoicedMinutes(name) }))
+    );
   }
 
   /** Records an invoice point (rounded up per the invoice rounding setting) and resets the clock. Returns the invoiced minutes. */
   async markInvoice(name: string, date: string): Promise<number> {
     const file = await this.getOrCreateProjectFile(name);
-    let content = await this.app.vault.read(file);
-    const raw = this.readUninvoiced(content);
-    const billed = roundUpMinutes(raw, this.getSettings().invoiceRounding);
-    content = appendInvoice(content, date, invoiceHoursLabel(raw, billed));
-    content = setFrontmatterFields(content, { uninvoiced_minutes: 0, last_invoice: date });
-    await this.app.vault.modify(file, content);
+    let billed = 0;
+    await this.app.vault.process(file, (content) => {
+      const raw = this.readUninvoiced(content);
+      billed = roundUpMinutes(raw, this.getSettings().invoiceRounding);
+      return setFrontmatterFields(appendInvoice(content, date, invoiceHoursLabel(raw, billed)), {
+        uninvoiced_minutes: 0,
+        last_invoice: date,
+      });
+    });
     return billed;
   }
 }
