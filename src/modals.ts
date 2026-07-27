@@ -48,7 +48,9 @@ export class StopModal extends Modal {
 export class ConfirmModal extends Modal {
   constructor(
     app: App,
+    private title: string,
     private message: string,
+    private ctaText: string,
     private onConfirm: () => void,
     private onDismiss?: () => void
   ) {
@@ -56,9 +58,12 @@ export class ConfirmModal extends Modal {
   }
 
   onOpen() {
-    this.contentEl.createEl("p", { text: this.message });
+    this.contentEl.createEl("h3", { text: this.title });
+    for (const paragraph of this.message.split("\n")) {
+      this.contentEl.createEl("p", { text: paragraph });
+    }
     const buttons = this.contentEl.createDiv({ cls: "modal-button-container" });
-    const confirm = buttons.createEl("button", { text: "Confirm", cls: "mod-cta" });
+    const confirm = buttons.createEl("button", { text: this.ctaText, cls: "mod-cta" });
     confirm.onclick = () => {
       this.close();
       this.onConfirm();

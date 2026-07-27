@@ -91,21 +91,34 @@ export class TrackerView extends ItemView {
       }
     };
 
+    const billable = rows.filter((row) => row.minutes > 0);
+    if (billable.length === 0) {
+      el.createEl("p", {
+        cls: "time-sync-empty",
+        text:
+          rows.length === 0
+            ? "You haven't saved any invoices yet. Track some time and each project's billable hours will appear here."
+            : "Nothing waiting to be invoiced — you're all caught up. New sessions will appear here.",
+      });
+      return;
+    }
     el.createEl("h4", { text: "Uninvoiced" });
     const list = el.createDiv({ cls: "time-sync-uninvoiced" });
-    if (rows.length === 0) list.createEl("p", { text: "No projects yet." });
-    for (const row of rows) {
+    for (const row of billable) {
       const item = list.createDiv({ cls: "time-sync-project-row" });
       item.createSpan({ text: `${row.name}: ${formatHours(row.minutes)}` });
       const invoiceBtn = item.createEl("button", { text: "Invoice" });
       invoiceBtn.onclick = () => {
         invoiceBtn.disabled = true;
         const billed = roundUpMinutes(row.minutes, this.plugin.settings.invoiceRounding);
+        const rounded =
+          billed !== row.minutes ? ` (rounded up from ${formatHours(row.minutes)})` : "";
         new ConfirmModal(
           this.app,
-          `Mark invoice point for "${row.name}" at ${formatHours(billed)}` +
-            (billed !== row.minutes ? ` (rounded up from ${formatHours(row.minutes)})` : "") +
-            `? This resets its uninvoiced time.`,
+          `Save an invoice point for ${row.name}?`,
+          `This records ${formatHours(billed)}${rounded} as invoiced, adding a dated line to the Invoices list in ${row.name}'s project note.\n` +
+            `${row.name}'s uninvoiced total then resets to zero, so new sessions count toward your next invoice.`,
+          "Save invoice point",
           async () => {
             const minutes = await this.plugin.store.markInvoice(row.name, dateStr(new Date()));
             new Notice(`Invoiced ${formatHours(minutes)} for ${row.name}.`);
