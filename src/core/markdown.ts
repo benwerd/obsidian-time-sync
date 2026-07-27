@@ -143,3 +143,8 @@ export function dailyLogLine(s: Session): string {
 export function sanitizeProjectName(name: string): string {
   return name.replace(/[\\/:#^\[\]|?*]/g, "").trim();
 }
+
+export function invoiceHoursLabel(rawMinutes: number, billedMinutes: number): string {
+  const billed = formatHours(billedMinutes);
+  return rawMinutes === billedMinutes ? billed : `${billed} (raw ${formatHours(rawMinutes)})`;
+}

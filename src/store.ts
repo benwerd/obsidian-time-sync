@@ -5,11 +5,12 @@ import {
   appendSession,
   createProjectFile,
   dailyLogLine,
+  invoiceHoursLabel,
   parseFrontmatter,
   sanitizeProjectName,
   setFrontmatterFields,
 } from "./core/markdown";
-import { dateStr, formatHours } from "./core/time";
+import { dateStr, roundUpMinutes } from "./core/time";
 import { TimeSyncSettings } from "./settings";
 
 export class VaultStore {
@@ -102,14 +103,15 @@ export class VaultStore {
     return result;
   }
 
-  /** Records an invoice point and resets the clock. Returns the invoiced minutes. */
+  /** Records an invoice point (rounded up per the invoice rounding setting) and resets the clock. Returns the invoiced minutes. */
   async markInvoice(name: string, date: string): Promise<number> {
     const file = await this.getOrCreateProjectFile(name);
     let content = await this.app.vault.read(file);
-    const minutes = this.readUninvoiced(content);
-    content = appendInvoice(content, date, formatHours(minutes));
+    const raw = this.readUninvoiced(content);
+    const billed = roundUpMinutes(raw, this.getSettings().invoiceRounding);
+    content = appendInvoice(content, date, invoiceHoursLabel(raw, billed));
     content = setFrontmatterFields(content, { uninvoiced_minutes: 0, last_invoice: date });
     await this.app.vault.modify(file, content);
-    return minutes;
+    return billed;
   }
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseFrontmatter, setFrontmatterFields, createProjectFile, appendSession, appendInvoice, dailyLogLine, sanitizeProjectName } from "../../src/core/markdown";
+import { parseFrontmatter, setFrontmatterFields, createProjectFile, appendSession, appendInvoice, dailyLogLine, sanitizeProjectName, invoiceHoursLabel } from "../../src/core/markdown";
 import { Session } from "../../src/core/types";
 
 const SAMPLE = `---
@@ -153,5 +153,14 @@ describe("sanitizeProjectName", () => {
   });
   it("trims whitespace", () => {
     expect(sanitizeProjectName("  ProjectX  ")).toBe("ProjectX");
+  });
+});
+
+describe("invoiceHoursLabel", () => {
+  it("shows just the hours when no rounding happened", () => {
+    expect(invoiceHoursLabel(90, 90)).toBe("1.5h");
+  });
+  it("shows billed hours with raw in parens when rounding happened", () => {
+    expect(invoiceHoursLabel(156, 180)).toBe("3h (raw 2.6h)");
   });
 });

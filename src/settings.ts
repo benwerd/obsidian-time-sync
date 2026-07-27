@@ -5,12 +5,14 @@ import type TimeSyncPlugin from "./main";
 export interface TimeSyncSettings {
   baseFolder: string;
   rounding: RoundingMode;
+  invoiceRounding: RoundingMode;
   dailyLog: boolean;
 }
 
 export const DEFAULT_SETTINGS: TimeSyncSettings = {
   baseFolder: "Time Tracking",
   rounding: "none",
+  invoiceRounding: "none",
   dailyLog: true,
 };
 
@@ -46,6 +48,23 @@ export class TimeSyncSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.rounding)
           .onChange(async (v) => {
             this.plugin.settings.rounding = v as RoundingMode;
+            await this.plugin.persist();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Round invoice totals up to")
+      .setDesc("Applied to a project's uninvoiced total when you mark an invoice point. Lets you log sessions unrounded but round up invoices.")
+      .addDropdown((d) =>
+        d
+          .addOption("none", "No rounding")
+          .addOption("6", "6 minutes")
+          .addOption("15", "15 minutes")
+          .addOption("30", "30 minutes")
+          .addOption("60", "1 hour")
+          .setValue(this.plugin.settings.invoiceRounding)
+          .onChange(async (v) => {
+            this.plugin.settings.invoiceRounding = v as RoundingMode;
             await this.plugin.persist();
           })
       );
