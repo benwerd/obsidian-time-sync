@@ -2,7 +2,7 @@ import { RoundingMode } from "./types";
 
 export function roundUpMinutes(rawMinutes: number, mode: RoundingMode): number {
   if (mode === "none") return rawMinutes;
-  const increment = mode === "30" ? 30 : 60;
+  const increment = parseInt(mode, 10);
   return Math.ceil(rawMinutes / increment) * increment;
 }
 

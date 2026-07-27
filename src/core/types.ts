@@ -1,4 +1,4 @@
-export type RoundingMode = "none" | "30" | "60";
+export type RoundingMode = "none" | "6" | "15" | "30" | "60";
 
 export interface Session {
   /** YYYY-MM-DD of the session start, local time */

@@ -18,6 +18,18 @@ describe("roundUpMinutes", () => {
     expect(roundUpMinutes(61, "60")).toBe(120);
   });
 
+  it("rounds up to the next 6-minute increment", () => {
+    expect(roundUpMinutes(1, "6")).toBe(6);
+    expect(roundUpMinutes(6, "6")).toBe(6);
+    expect(roundUpMinutes(7, "6")).toBe(12);
+  });
+
+  it("rounds up to the next 15-minute increment", () => {
+    expect(roundUpMinutes(1, "15")).toBe(15);
+    expect(roundUpMinutes(15, "15")).toBe(15);
+    expect(roundUpMinutes(16, "15")).toBe(30);
+  });
+
   it("does not round exact multiples further", () => {
     expect(roundUpMinutes(30, "30")).toBe(30);
     expect(roundUpMinutes(60, "30")).toBe(60);

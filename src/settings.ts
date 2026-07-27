@@ -39,6 +39,8 @@ export class TimeSyncSettingTab extends PluginSettingTab {
       .addDropdown((d) =>
         d
           .addOption("none", "No rounding")
+          .addOption("6", "6 minutes")
+          .addOption("15", "15 minutes")
           .addOption("30", "30 minutes")
           .addOption("60", "1 hour")
           .setValue(this.plugin.settings.rounding)
