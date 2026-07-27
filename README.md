@@ -66,13 +66,13 @@ last_invoice: 2026-07-15
 
 ## Invoices
 
-| Date | Billable hours | Sessions total | Note |
+| Date | Sessions total | Billable hours | Note |
 | ---- | -------------- | -------------- | ---- |
-| 2026-07-15 | 13h | 12.5h | Invoice #42 — June work |
+| 2026-07-15 | 12.5h | 13h | Invoice #42 — June work |
 ```
 
 - The **frontmatter** is the plugin's source of truth: `uninvoiced_minutes` is the running billable total since the last invoice, and it's what the sidebar displays. Because it's ordinary frontmatter, you can query it with Dataview or anything else that reads properties.
-- The **Invoices table** grows one row per saved invoice. **Billable hours** is what you invoice — the uninvoiced total after invoice rounding is applied. **Sessions total** is the sum of the already-rounded, billed session time it covers. The two match when invoice rounding is off; when it's on, invoice rounding is applied to that sum of billed minutes, never to raw, unrounded time. **Note** is whatever you typed when you saved the invoice — an invoice number, the period covered, where you sent it, anything that helps you write the actual invoice document later.
+- The **Invoices table** grows one row per saved invoice. **Sessions total** is the sum of the already-rounded, billed session time the invoice covers. **Billable hours** is what you invoice — that total after invoice rounding is applied. The two match when invoice rounding is off; when it's on, invoice rounding is applied to that sum of billed minutes, never to raw, unrounded time. **Note** is whatever you typed when you saved the invoice — an invoice number, the period covered, where you sent it, anything that helps you write the actual invoice document later.
 
 ### The daily logs
 

@@ -133,7 +133,7 @@ export function appendDailySession(content: string, session: Session): string {
   return lines.join("\n");
 }
 
-const INVOICES_HEADER = "| Date | Billable hours | Sessions total | Note |";
+const INVOICES_HEADER = "| Date | Sessions total | Billable hours | Note |";
 const INVOICES_DIVIDER = "| ---- | -------------- | -------------- | ---- |";
 const INVOICE_COLUMNS = tableCellCount(INVOICES_HEADER);
 
@@ -148,7 +148,7 @@ export interface InvoiceRecord {
 
 function invoiceRow(r: InvoiceRecord): string {
   const note = r.note.replace(/\n/g, " ").replace(/\|/g, "\\|");
-  return `| ${r.date} | ${formatHours(r.invoicedMinutes)} | ${formatHours(r.sessionsTotalMinutes)} | ${note} |`;
+  return `| ${r.date} | ${formatHours(r.sessionsTotalMinutes)} | ${formatHours(r.invoicedMinutes)} | ${note} |`;
 }
 
 export function appendInvoice(content: string, invoice: InvoiceRecord): string {

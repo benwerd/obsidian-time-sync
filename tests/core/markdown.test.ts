@@ -89,7 +89,7 @@ describe("createProjectFile", () => {
     expect(out).toContain("# ProjectX");
     expect(out).toContain("## Invoices");
     expect(out).not.toContain("## Sessions");
-    expect(out).toContain("| Date | Billable hours | Sessions total | Note |");
+    expect(out).toContain("| Date | Sessions total | Billable hours | Note |");
   });
 });
 
@@ -177,7 +177,7 @@ describe("appendInvoice", () => {
 
   it("appends a table row under the Invoices table", () => {
     const out = appendInvoice(createProjectFile("P", "2026-07-27"), invoice);
-    expect(out).toContain("| 2026-07-15 | 13h | 12.5h | Invoice #42 |");
+    expect(out).toContain("| 2026-07-15 | 12.5h | 13h | Invoice #42 |");
   });
 
   it("keeps rows in insertion order", () => {
@@ -189,8 +189,8 @@ describe("appendInvoice", () => {
   it("creates the section and table when missing", () => {
     const out = appendInvoice("# P\n", invoice);
     expect(out).toContain("## Invoices");
-    expect(out).toContain("| Date | Billable hours | Sessions total | Note |");
-    expect(out).toContain("| 2026-07-15 | 13h |");
+    expect(out).toContain("| Date | Sessions total | Billable hours | Note |");
+    expect(out).toContain("| 2026-07-15 | 12.5h |");
   });
 
   it("recreates the table under an existing empty Invoices heading", () => {
