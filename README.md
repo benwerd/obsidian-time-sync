@@ -87,6 +87,18 @@ If daily logs are enabled (they are by default), each session also appends a lin
 
 These are handy for embedding in daily notes or skimming a week's work.
 
+### Make the notes your own
+
+These are ordinary markdown notes, and you're encouraged to edit them by hand — add context, links, headings, whatever makes the record useful to you:
+
+- **Daily logs are fully free-form.** The plugin only ever *appends* a line to the end of the day's file. Reorganize it, add prose around the bullets, embed it in your daily note — new sessions simply land at the bottom.
+- **Project files welcome your edits too.** The plugin makes append-only changes (a new row in the Sessions table, a new line in the Invoices list) and updates frontmatter one line at a time. Your own frontmatter properties (tags, aliases, Dataview fields — list values included), prose between sections, and edits to existing session rows and notes are all preserved.
+
+Two small rules of the road:
+
+1. **Keep the `## Sessions` and `## Invoices` headings.** If one goes missing, the plugin recreates it at the bottom of the file rather than losing data — functional, but probably not where you wanted it.
+2. **Don't add columns to the Sessions table.** The plugin always appends rows with its six columns, so extra columns would fall out of sync. Put extra detail in the Note column or in prose below the table instead.
+
 ### How data is read back
 
 The plugin reads, never guesses: the project dropdown is simply the list of notes in `Time Tracking/Projects/`, and the uninvoiced totals come straight from each note's frontmatter. That means the files are safely editable by hand — fix a typo in a note, add tags, link the project file from anywhere. (If you hand-edit `uninvoiced_minutes`, the plugin will believe you — that's a feature.) The active timer itself (project + start time) is stored in the plugin's own settings file, not in your notes, so a half-finished session never litters your vault.
