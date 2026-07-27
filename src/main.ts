@@ -4,6 +4,7 @@ import { VaultStore } from "./store";
 import { TrackerView, VIEW_TYPE_TIME_SYNC } from "./view";
 import { StartTimerModal, StopModal } from "./modals";
 import { ActiveTimer, Session } from "./core/types";
+import { sanitizeProjectName } from "./core/markdown";
 import { dateStr, formatClock, formatDuration, roundUpMinutes, timeStr } from "./core/time";
 
 interface PersistedData {
@@ -74,6 +75,11 @@ export default class TimeSyncPlugin extends Plugin {
       new Notice(`Already tracking "${this.activeTimer.project}" — stop it first.`);
       return;
     }
+    project = sanitizeProjectName(project);
+    if (!project) {
+      new Notice("Enter a valid project name first.");
+      return;
+    }
     this.activeTimer = { project, startedAt: Date.now() };
     await this.persist();
     this.updateStatusBar();
@@ -87,31 +93,39 @@ export default class TimeSyncPlugin extends Plugin {
     const rawMinutes = Math.max(1, Math.round((now - timer.startedAt) / 60000));
     const billedMinutes = roundUpMinutes(rawMinutes, this.settings.rounding);
     this.stopModalOpen = true;
+    let submitted = false;
     new StopModal(
       this.app,
       timer.project,
       rawMinutes,
       billedMinutes,
       async (note) => {
-        const start = new Date(timer.startedAt);
-        const end = new Date(now);
-        const session: Session = {
-          date: dateStr(start),
-          start: timeStr(start),
-          end: timeStr(end),
-          rawMinutes,
-          billedMinutes,
-          note: note.trim(),
-        };
-        await this.store.recordSession(timer.project, session);
-        this.activeTimer = null;
-        await this.persist();
-        this.updateStatusBar();
-        this.refreshView();
-        new Notice(`Logged ${formatDuration(billedMinutes)} to ${timer.project}.`);
+        submitted = true;
+        try {
+          const start = new Date(timer.startedAt);
+          const end = new Date(now);
+          const session: Session = {
+            date: dateStr(start),
+            start: timeStr(start),
+            end: timeStr(end),
+            rawMinutes,
+            billedMinutes,
+            note: note.trim(),
+          };
+          await this.store.recordSession(timer.project, session);
+          this.activeTimer = null;
+          await this.persist();
+          this.updateStatusBar();
+          this.refreshView();
+          new Notice(`Logged ${formatDuration(billedMinutes)} to ${timer.project}.`);
+        } finally {
+          // Guard stays up until the session write finishes, so a rapid second
+          // Stop can't record the same timer twice.
+          this.stopModalOpen = false;
+        }
       },
       () => {
-        this.stopModalOpen = false;
+        if (!submitted) this.stopModalOpen = false;
       }
     ).open();
   }
