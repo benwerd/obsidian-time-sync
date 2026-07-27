@@ -2,23 +2,30 @@ import { App, PluginSettingTab, Setting } from "obsidian";
 import { RoundingMode } from "./core/types";
 import type TimeSyncPlugin from "./main";
 
+/** Persisted plugin configuration. */
 export interface TimeSyncSettings {
   baseFolder: string;
+  /** Rounding applied to a session's raw minutes at stop time to produce billed minutes. */
   rounding: RoundingMode;
+  /** Rounding applied to a project's accumulated uninvoiced minutes when an invoice is saved. */
   invoiceRounding: RoundingMode;
 }
 
+/** Default settings used until the user overrides them (or on first install). */
 export const DEFAULT_SETTINGS: TimeSyncSettings = {
   baseFolder: "Time Tracking",
   rounding: "none",
   invoiceRounding: "none",
 };
 
+/** Obsidian settings tab for configuring the base vault folder and the two independent rounding modes. */
 export class TimeSyncSettingTab extends PluginSettingTab {
+  /** Keeps a reference to the owning plugin so each control can mutate `plugin.settings` and persist immediately. */
   constructor(app: App, private plugin: TimeSyncPlugin) {
     super(app, plugin);
   }
 
+  /** Renders the settings UI into `containerEl`, replacing any previous contents. */
   display(): void {
     const { containerEl } = this;
     containerEl.empty();

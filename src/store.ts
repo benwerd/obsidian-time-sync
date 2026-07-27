@@ -12,21 +12,31 @@ import {
 import { dateStr, roundUpMinutes } from "./core/time";
 import { TimeSyncSettings } from "./settings";
 
+/**
+ * Reads and writes a project's vault files: the project note (frontmatter totals
+ * plus the Invoices table) and its per-day daily logs (the actual session records).
+ * All paths are derived from the configured base folder and the sanitized project name.
+ */
 export class VaultStore {
+  /** @param getSettings - a getter (not a snapshot) so the store always sees the plugin's current settings. */
   constructor(private app: App, private getSettings: () => TimeSyncSettings) {}
 
+  /** Vault path of the folder containing every project's subfolder. */
   private projectsFolder(): string {
     return normalizePath(`${this.getSettings().baseFolder}/Projects`);
   }
 
+  /** Vault path of a single project's folder (containing its note and Daily subfolder). */
   private projectFolder(name: string): string {
     return normalizePath(`${this.projectsFolder()}/${sanitizeProjectName(name)}`);
   }
 
+  /** Vault path of a project's note file. */
   private projectPath(name: string): string {
     return normalizePath(`${this.projectFolder(name)}/${sanitizeProjectName(name)}.md`);
   }
 
+  /** Lists known project names by reading the subfolders of the Projects folder (alphabetical). */
   async listProjects(): Promise<string[]> {
     const folder = this.app.vault.getAbstractFileByPath(this.projectsFolder());
     if (!(folder instanceof TFolder)) return [];
@@ -36,6 +46,7 @@ export class VaultStore {
       .sort();
   }
 
+  /** Creates every path segment of `path` that doesn't already exist, ignoring "already exists" races. */
   private async ensureFolder(path: string): Promise<void> {
     const parts = path.split("/");
     let current = "";
@@ -47,6 +58,7 @@ export class VaultStore {
     }
   }
 
+  /** Returns the project's note file, creating it (and its folder) with a fresh frontmatter block if it doesn't exist yet. */
   private async getOrCreateProjectFile(name: string): Promise<TFile> {
     const path = this.projectPath(name);
     const existing = this.app.vault.getAbstractFileByPath(path);
@@ -55,6 +67,7 @@ export class VaultStore {
     return this.app.vault.create(path, createProjectFile(sanitizeProjectName(name), dateStr(new Date())));
   }
 
+  /** Reads `uninvoiced_minutes` from a project note's frontmatter, falling back to 0 (with a warning Notice) if it's missing or not a number. */
   private readUninvoiced(content: string): number {
     const value = Number(parseFrontmatter(content)["uninvoiced_minutes"]);
     if (Number.isNaN(value)) {
@@ -64,6 +77,12 @@ export class VaultStore {
     return value;
   }
 
+  /**
+   * Records a completed session: adds its (already-rounded) billed minutes to the
+   * project note's uninvoiced total, then appends the full session detail to the
+   * day's daily log. The daily log is the session record; the project note only
+   * ever sees the rolled-up sum.
+   */
   async recordSession(name: string, session: Session): Promise<void> {
     const file = await this.getOrCreateProjectFile(name);
     await this.app.vault.process(file, (content) => {
@@ -75,6 +94,7 @@ export class VaultStore {
     await this.appendDailyLog(name, session);
   }
 
+  /** Appends `session` to the project's daily log for `session.date`, creating that day's log file if needed. */
   private async appendDailyLog(name: string, session: Session): Promise<void> {
     const folder = normalizePath(`${this.projectFolder(name)}/Daily`);
     await this.ensureFolder(folder);
@@ -87,12 +107,14 @@ export class VaultStore {
     }
   }
 
+  /** Returns a project's current uninvoiced minutes, or 0 if the project note doesn't exist. */
   async getUninvoicedMinutes(name: string): Promise<number> {
     const file = this.app.vault.getAbstractFileByPath(this.projectPath(name));
     if (!(file instanceof TFile)) return 0;
     return this.readUninvoiced(await this.app.vault.read(file));
   }
 
+  /** Returns every project's name paired with its current uninvoiced minutes. */
   async listUninvoiced(): Promise<{ name: string; minutes: number }[]> {
     const names = await this.listProjects();
     return Promise.all(
@@ -100,7 +122,11 @@ export class VaultStore {
     );
   }
 
-  /** Saves an invoice (rounded up per the invoice rounding setting) and resets the uninvoiced total. Returns the invoiced minutes. */
+  /**
+   * Saves an invoice for the project's current uninvoiced total and resets that
+   * total to zero. Invoice rounding is applied here, to the accumulated (already
+   * session-rounded) total — never to raw session time. Returns the invoiced minutes.
+   */
   async markInvoice(name: string, date: string, note: string): Promise<number> {
     const file = await this.getOrCreateProjectFile(name);
     let invoiced = 0;

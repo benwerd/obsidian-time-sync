@@ -1,8 +1,15 @@
 import { Session } from "./types";
 import { formatDuration, formatHours } from "./time";
 
+/** Matches a leading YAML frontmatter block, capturing its inner content (group 1). */
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
+/**
+ * Parses top-level `key: value` pairs out of a note's frontmatter block.
+ * Only used internally to read back the `uninvoiced_minutes` figure — indented
+ * continuation lines (YAML lists, multi-line values) are intentionally skipped
+ * since they aren't simple scalars, and are left untouched by the writer below.
+ */
 export function parseFrontmatter(content: string): Record<string, string> {
   const match = content.match(FRONTMATTER_RE);
   if (!match) return {};
@@ -19,6 +26,13 @@ export function parseFrontmatter(content: string): Record<string, string> {
   return fields;
 }
 
+/**
+ * Writes `updates` into a note's frontmatter, editing line-wise rather than
+ * re-serializing the whole block. Existing top-level keys are replaced in place;
+ * new keys are appended; every other line — including YAML lists and multi-line
+ * values the user added by hand — is preserved verbatim. This is what makes the
+ * project note's frontmatter safe to treat as the source of truth for totals.
+ */
 export function setFrontmatterFields(
   content: string,
   updates: Record<string, string | number>
@@ -70,6 +84,11 @@ export function setFrontmatterFields(
   return block + content.slice(match[0].length);
 }
 
+/**
+ * Builds the initial content for a new project note: frontmatter seeded with
+ * a zero uninvoiced total, a title heading, and an empty Invoices table.
+ * The project note holds totals and invoices only — sessions live in daily logs.
+ */
 export function createProjectFile(name: string, created: string): string {
   return [
     "---",
@@ -87,6 +106,7 @@ export function createProjectFile(name: string, created: string): string {
   ].join("\n");
 }
 
+/** Header/divider pair identifying a daily log's session table; appends anchor on this exact pair. */
 const DAILY_HEADER = "| Start | End | Raw | Billed | Note |";
 const DAILY_DIVIDER = "| ----- | --- | --- | ------ | ---- |";
 
@@ -96,17 +116,30 @@ function tableCellCount(line: string): number {
   return pipes ? pipes.length - 1 : 0;
 }
 
+/** Expected cell count for a well-formed daily-log row; used to detect where the table ends. */
 const DAILY_COLUMNS = tableCellCount(DAILY_HEADER);
 
+/** Renders a session as one daily-log table row, escaping newlines and pipes out of the note. */
 function dailySessionRow(s: Session): string {
   const note = s.note.replace(/\n/g, " ").replace(/\|/g, "\\|");
   return `| ${s.start} | ${s.end} | ${formatDuration(s.rawMinutes)} | ${formatDuration(s.billedMinutes)} | ${note} |`;
 }
 
+/** Builds a new daily log file (one per project per day) seeded with its first session row. */
 export function createDailyFile(date: string, session: Session): string {
   return [`# ${date}`, "", DAILY_HEADER, DAILY_DIVIDER, dailySessionRow(session), ""].join("\n");
 }
 
+/**
+ * Appends a session row to a daily log's session table — the authoritative record
+ * of individual sessions (the project note only holds rolled-up totals).
+ *
+ * Finds the table by its exact header/divider pair, then scans rows until the
+ * first line whose cell count doesn't match the header, so unrelated hand-added
+ * tables or code fences elsewhere in the file are never mistaken for the row
+ * scan and can't be corrupted. If the header/divider pair isn't found at all,
+ * a fresh table is appended rather than guessing at a location.
+ */
 export function appendDailySession(content: string, session: Session): string {
   const lines = content.split("\n");
   let headerIdx = -1;
@@ -133,10 +166,12 @@ export function appendDailySession(content: string, session: Session): string {
   return lines.join("\n");
 }
 
+/** Header/divider pair identifying the project note's Invoices table; appends anchor on this exact pair. */
 const INVOICES_HEADER = "| Date | Sessions total | Billable hours | Note |";
 const INVOICES_DIVIDER = "| ---- | -------------- | -------------- | ---- |";
 const INVOICE_COLUMNS = tableCellCount(INVOICES_HEADER);
 
+/** One row of the project note's Invoices table, recording a rounding decision at invoice time. */
 export interface InvoiceRecord {
   date: string;
   /** minutes actually invoiced, after invoice rounding */
@@ -146,11 +181,21 @@ export interface InvoiceRecord {
   note: string;
 }
 
+/** Renders an invoice as one Invoices-table row, escaping newlines and pipes out of the note. */
 function invoiceRow(r: InvoiceRecord): string {
   const note = r.note.replace(/\n/g, " ").replace(/\|/g, "\\|");
   return `| ${r.date} | ${formatHours(r.sessionsTotalMinutes)} | ${formatHours(r.invoicedMinutes)} | ${note} |`;
 }
 
+/**
+ * Appends an invoice row to the project note's Invoices table.
+ *
+ * Mirrors `appendDailySession`'s anchoring strategy: finds the table by its
+ * exact header/divider pair and stops the row scan at the first line with a
+ * mismatched cell count, so hand-edited content elsewhere is left alone. If
+ * the table is missing, it's recreated under the `## Invoices` heading (or
+ * appended fresh if even that heading is gone) rather than guessing at a location.
+ */
 export function appendInvoice(content: string, invoice: InvoiceRecord): string {
   const lines = content.split("\n");
   let headerIdx = -1;
@@ -179,6 +224,7 @@ export function appendInvoice(content: string, invoice: InvoiceRecord): string {
   return lines.join("\n");
 }
 
+/** Strips characters that are unsafe in vault file/folder names (path separators, wiki-link and Markdown syntax) and trims whitespace. */
 export function sanitizeProjectName(name: string): string {
   return name.replace(/[\\/:#^\[\]|?*]/g, "").trim();
 }

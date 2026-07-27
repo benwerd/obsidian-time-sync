@@ -7,18 +7,26 @@ import { ActiveTimer, Session } from "./core/types";
 import { sanitizeProjectName } from "./core/markdown";
 import { dateStr, formatClock, formatDuration, roundUpMinutes, timeStr } from "./core/time";
 
+/** Shape of the plugin's `saveData`/`loadData` payload. */
 interface PersistedData {
   settings: TimeSyncSettings;
   activeTimer: ActiveTimer | null;
 }
 
+/** Time Sync plugin entry point: wires up the view, status bar, commands, and settings tab, and owns the single active timer. */
 export default class TimeSyncPlugin extends Plugin {
   settings: TimeSyncSettings = { ...DEFAULT_SETTINGS };
   activeTimer: ActiveTimer | null = null;
   store!: VaultStore;
   private statusBar!: HTMLElement;
+  /**
+   * True from the moment Stop is pressed until the session write finishes.
+   * Guards `stopTimer` against a rapid second Stop invocation double-recording
+   * the same timer while the async write is still in flight.
+   */
   private stopModalOpen = false;
 
+  /** Obsidian lifecycle hook: loads persisted settings/timer, registers the view, ribbon icon, status bar, commands, and settings tab. */
   async onload() {
     const data = (await this.loadData()) as Partial<PersistedData> | null;
     this.settings = { ...DEFAULT_SETTINGS, ...(data?.settings ?? {}) };
@@ -65,11 +73,18 @@ export default class TimeSyncPlugin extends Plugin {
     this.addSettingTab(new TimeSyncSettingTab(this.app, this));
   }
 
+  /** Writes settings and the active timer to Obsidian's plugin data store. */
   async persist() {
     const data: PersistedData = { settings: this.settings, activeTimer: this.activeTimer };
     await this.saveData(data);
   }
 
+  /**
+   * Starts tracking `project`. Sanitizes the name here so that every entry
+   * point — the view's input, the command palette's StartTimerModal — ends up
+   * agreeing on the same on-disk project identity. Persists immediately so the
+   * timer survives an app quit or crash and resumes from this start time.
+   */
   async startTimer(project: string) {
     if (this.activeTimer) {
       new Notice(`Already tracking "${this.activeTimer.project}" — stop it first.`);
@@ -86,6 +101,13 @@ export default class TimeSyncPlugin extends Plugin {
     this.refreshView();
   }
 
+  /**
+   * Opens the Stop confirmation modal for the active timer. Computes raw and
+   * billed minutes up front (billed = raw rounded up per the session rounding
+   * setting) so the modal can show both. `stopModalOpen` blocks re-entry until
+   * the modal's onSubmit has finished writing the session — see the field's
+   * doc comment. Cancelling the modal leaves the timer running untouched.
+   */
   stopTimer() {
     const timer = this.activeTimer;
     if (!timer || this.stopModalOpen) return;
@@ -125,11 +147,15 @@ export default class TimeSyncPlugin extends Plugin {
         }
       },
       () => {
+        // onDismiss fires on every close, including after a successful submit (whose
+        // finally-block has already cleared the guard) — only clear it here for a
+        // plain Cancel, so we don't race a fresh stopTimer() call against the write above.
         if (!submitted) this.stopModalOpen = false;
       }
     ).open();
   }
 
+  /** Reveals the Time Sync view in the right sidebar, reusing an existing leaf if one is already open rather than creating a duplicate. */
   private async activateView() {
     const { workspace } = this.app;
     let leaf = workspace.getLeavesOfType(VIEW_TYPE_TIME_SYNC)[0];
@@ -142,12 +168,14 @@ export default class TimeSyncPlugin extends Plugin {
     workspace.revealLeaf(leaf);
   }
 
+  /** Re-renders every open Time Sync view (there may be more than one across split panes) after timer state changes. */
   private refreshView() {
     for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_TIME_SYNC)) {
       if (leaf.view instanceof TrackerView) void leaf.view.render();
     }
   }
 
+  /** Updates the status bar text to show the running project and elapsed time, or clears it when nothing is tracking. */
   private updateStatusBar() {
     if (this.activeTimer) {
       this.statusBar.setText(
