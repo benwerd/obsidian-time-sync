@@ -138,6 +138,27 @@ describe("appendDailySession", () => {
     expect(out).toContain("| Coffee | $4 |\n");
   });
 
+  it("stops at an adjacent unrelated table with no blank line between", () => {
+    const adjacent =
+      createDailyFile("2026-07-27", session) + "| Item | Cost |\n| ---- | ---- |\n| Coffee | $4 |\n";
+    const second: Session = { ...session, start: "11:00", end: "11:30", note: "Second" };
+    const out = appendDailySession(adjacent, second);
+    expect(out.indexOf("| 11:00 |")).toBeLessThan(out.indexOf("| Item | Cost |"));
+    expect(out).toContain("| Coffee | $4 |");
+  });
+
+  it("still appends rows whose notes contain escaped pipes", () => {
+    const withEscaped = appendDailySession(createDailyFile("2026-07-27", session), {
+      ...session,
+      start: "11:00",
+      end: "11:30",
+      note: "a|b",
+    });
+    const third: Session = { ...session, start: "13:00", end: "13:30", note: "Third" };
+    const out = appendDailySession(withEscaped, third);
+    expect(out.indexOf("a\\|b")).toBeLessThan(out.indexOf("| 13:00 |"));
+  });
+
   it("ignores pipe-prefixed lines inside code fences", () => {
     const withFence =
       "# 2026-07-27\n\n```\n| not | a | table |\n```\n\n" +

@@ -87,6 +87,14 @@ export function createProjectFile(name: string, created: string): string {
 const DAILY_HEADER = "| Start | End | Raw | Billed | Note |";
 const DAILY_DIVIDER = "| ----- | --- | --- | ------ | ---- |";
 
+/** Cell count of a table row line, ignoring escaped pipes (`\|`) inside cells. */
+function tableCellCount(line: string): number {
+  const pipes = line.replace(/\\\|/g, "").match(/\|/g);
+  return pipes ? pipes.length - 1 : 0;
+}
+
+const DAILY_COLUMNS = tableCellCount(DAILY_HEADER);
+
 function dailySessionRow(s: Session): string {
   const note = s.note.replace(/\n/g, " ").replace(/\|/g, "\\|");
   return `| ${s.start} | ${s.end} | ${formatDuration(s.rawMinutes)} | ${formatDuration(s.billedMinutes)} | ${note} |`;
@@ -114,7 +122,8 @@ export function appendDailySession(content: string, session: Session): string {
   }
   let lastRowIdx = headerIdx + 1;
   for (let i = headerIdx + 2; i < lines.length; i++) {
-    if (lines[i].trim().startsWith("|")) lastRowIdx = i;
+    const t = lines[i].trim();
+    if (t.startsWith("|") && tableCellCount(t) === DAILY_COLUMNS) lastRowIdx = i;
     else break;
   }
   lines.splice(lastRowIdx + 1, 0, dailySessionRow(session));
