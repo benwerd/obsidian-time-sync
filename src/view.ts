@@ -57,7 +57,7 @@ export class TrackerView extends ItemView {
     const picker = el.createDiv({ cls: "time-sync-picker" });
     this.projectInput = picker.createEl("input", {
       type: "text",
-      placeholder: "Project name…",
+      placeholder: "Type or select your project name",
     });
     this.projectInput.setAttr("list", this.datalistId);
     const datalist = picker.createEl("datalist");
