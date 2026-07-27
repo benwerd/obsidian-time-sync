@@ -127,6 +127,27 @@ describe("appendDailySession", () => {
     const out = appendDailySession(withProse, second);
     expect(out.indexOf("| 11:00 |")).toBeLessThan(out.indexOf("Some reflections"));
   });
+
+  it("does not append into an unrelated hand-added table", () => {
+    const withExpenses =
+      createDailyFile("2026-07-27", session) +
+      "\n## Expenses\n\n| Item | Cost |\n| ---- | ---- |\n| Coffee | $4 |\n";
+    const second: Session = { ...session, start: "11:00", end: "11:30", note: "Second" };
+    const out = appendDailySession(withExpenses, second);
+    expect(out.indexOf("| 11:00 |")).toBeLessThan(out.indexOf("## Expenses"));
+    expect(out).toContain("| Coffee | $4 |\n");
+  });
+
+  it("ignores pipe-prefixed lines inside code fences", () => {
+    const withFence =
+      "# 2026-07-27\n\n```\n| not | a | table |\n```\n\n" +
+      "| Start | End | Raw | Billed | Note |\n| ----- | --- | --- | ------ | ---- |\n| 09:00 | 10:15 | 1h 15m | 1h 30m | Wrote docs |\n";
+    const second: Session = { ...session, start: "11:00", end: "11:30", note: "Second" };
+    const out = appendDailySession(withFence, second);
+    expect(out.indexOf("| 11:00 |")).toBeGreaterThan(out.indexOf("Wrote docs"));
+    expect(out.indexOf("| 11:00 |")).toBeLessThan(out.length);
+    expect(out).not.toMatch(/```\n\| not \| a \| table \|\n\| 11:00/);
+  });
 });
 
 describe("appendInvoice", () => {

@@ -98,18 +98,26 @@ export function createDailyFile(date: string, session: Session): string {
 
 export function appendDailySession(content: string, session: Session): string {
   const lines = content.split("\n");
-  let lastTableIdx = -1;
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].trim().startsWith("|")) lastTableIdx = i;
+  let headerIdx = -1;
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (lines[i].trim() === DAILY_HEADER && lines[i + 1].trim() === DAILY_DIVIDER) {
+      headerIdx = i;
+      break;
+    }
   }
-  if (lastTableIdx === -1) {
+  if (headerIdx === -1) {
     return (
       content.replace(/\n*$/, "\n") +
       ["", DAILY_HEADER, DAILY_DIVIDER, dailySessionRow(session)].join("\n") +
       "\n"
     );
   }
-  lines.splice(lastTableIdx + 1, 0, dailySessionRow(session));
+  let lastRowIdx = headerIdx + 1;
+  for (let i = headerIdx + 2; i < lines.length; i++) {
+    if (lines[i].trim().startsWith("|")) lastRowIdx = i;
+    else break;
+  }
+  lines.splice(lastRowIdx + 1, 0, dailySessionRow(session));
   return lines.join("\n");
 }
 
