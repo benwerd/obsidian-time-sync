@@ -1,0 +1,9 @@
+{
+  "id": "time-sync",
+  "name": "Time Sync",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Track time per project with invoice points, stored as markdown.",
+  "author": "Ben Werdmuller",
+  "isDesktopOnly": false
+}
