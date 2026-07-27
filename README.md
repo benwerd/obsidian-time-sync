@@ -9,7 +9,7 @@ A friendly little time tracker that lives in your [Obsidian](https://obsidian.md
 - **Round up for billing — your way.** Sessions can be billed exactly as tracked, or rounded **up** to 6, 15, 30, or 60 minute increments. There's a *separate* rounding setting for invoice totals, so you can log sessions with zero rounding and still round the invoice up.
 - **Know what's uninvoiced.** The sidebar shows each project's billable hours since its last invoice point.
 - **Mark invoice points.** One click (plus a confirmation) records the invoicable hours in the project's file and resets its clock to zero. If invoice rounding bumped the total, the raw hours are recorded alongside for transparency.
-- **Survive restarts.** If Obsidian quits while a timer is running, the timer is still running when you come back — elapsed from the original start time.
+- **Survive restarts.** If Obsidian quits while a timer is running, the timer is still running when you come back — elapsed from the original start time. (The session is written to your notes when you press Stop; while Obsidian is closed, the in-progress session lives in the plugin's own state, not yet in markdown.)
 
 ## Installing
 
