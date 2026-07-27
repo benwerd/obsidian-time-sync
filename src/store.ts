@@ -1,10 +1,10 @@
 import { App, Notice, TFile, TFolder, normalizePath } from "obsidian";
 import { Session } from "./core/types";
 import {
+  appendDailySession,
   appendInvoice,
-  appendSession,
+  createDailyFile,
   createProjectFile,
-  dailyLogLine,
   invoiceHoursLabel,
   parseFrontmatter,
   sanitizeProjectName,
@@ -69,25 +69,22 @@ export class VaultStore {
     const file = await this.getOrCreateProjectFile(name);
     await this.app.vault.process(file, (content) => {
       const uninvoiced = this.readUninvoiced(content);
-      return setFrontmatterFields(appendSession(content, session), {
+      return setFrontmatterFields(content, {
         uninvoiced_minutes: uninvoiced + session.billedMinutes,
       });
     });
-    if (this.getSettings().dailyLog) {
-      await this.appendDailyLog(name, session);
-    }
+    await this.appendDailyLog(name, session);
   }
 
   private async appendDailyLog(name: string, session: Session): Promise<void> {
     const folder = normalizePath(`${this.projectFolder(name)}/Daily`);
     await this.ensureFolder(folder);
     const path = normalizePath(`${folder}/${session.date}.md`);
-    const line = dailyLogLine(session);
     const existing = this.app.vault.getAbstractFileByPath(path);
     if (existing instanceof TFile) {
-      await this.app.vault.process(existing, (content) => content.replace(/\n*$/, "\n") + line + "\n");
+      await this.app.vault.process(existing, (content) => appendDailySession(content, session));
     } else {
-      await this.app.vault.create(path, `# ${session.date}\n\n${line}\n`);
+      await this.app.vault.create(path, createDailyFile(session.date, session));
     }
   }
 

@@ -6,14 +6,12 @@ export interface TimeSyncSettings {
   baseFolder: string;
   rounding: RoundingMode;
   invoiceRounding: RoundingMode;
-  dailyLog: boolean;
 }
 
 export const DEFAULT_SETTINGS: TimeSyncSettings = {
   baseFolder: "Time Tracking",
   rounding: "none",
   invoiceRounding: "none",
-  dailyLog: true,
 };
 
 export class TimeSyncSettingTab extends PluginSettingTab {
@@ -67,16 +65,6 @@ export class TimeSyncSettingTab extends PluginSettingTab {
             this.plugin.settings.invoiceRounding = v as RoundingMode;
             await this.plugin.persist();
           })
-      );
-
-    new Setting(containerEl)
-      .setName("Daily logs")
-      .setDesc("Also append each session to Projects/<name>/Daily/YYYY-MM-DD.md.")
-      .addToggle((t) =>
-        t.setValue(this.plugin.settings.dailyLog).onChange(async (v) => {
-          this.plugin.settings.dailyLog = v;
-          await this.plugin.persist();
-        })
       );
   }
 }

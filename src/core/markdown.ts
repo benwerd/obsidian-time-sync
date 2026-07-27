@@ -70,9 +70,6 @@ export function setFrontmatterFields(
   return block + content.slice(match[0].length);
 }
 
-const SESSIONS_HEADER = "| Date | Start | End | Raw | Billed | Note |";
-const SESSIONS_DIVIDER = "| ---- | ----- | --- | --- | ------ | ---- |";
-
 export function createProjectFile(name: string, created: string): string {
   return [
     "---",
@@ -82,39 +79,37 @@ export function createProjectFile(name: string, created: string): string {
     "",
     `# ${name}`,
     "",
-    "## Sessions",
-    "",
-    SESSIONS_HEADER,
-    SESSIONS_DIVIDER,
-    "",
     "## Invoices",
     "",
   ].join("\n");
 }
 
-function sessionRow(s: Session): string {
+const DAILY_HEADER = "| Start | End | Raw | Billed | Note |";
+const DAILY_DIVIDER = "| ----- | --- | --- | ------ | ---- |";
+
+function dailySessionRow(s: Session): string {
   const note = s.note.replace(/\n/g, " ").replace(/\|/g, "\\|");
-  return `| ${s.date} | ${s.start} | ${s.end} | ${formatDuration(s.rawMinutes)} | ${formatDuration(s.billedMinutes)} | ${note} |`;
+  return `| ${s.start} | ${s.end} | ${formatDuration(s.rawMinutes)} | ${formatDuration(s.billedMinutes)} | ${note} |`;
 }
 
-export function appendSession(content: string, session: Session): string {
+export function createDailyFile(date: string, session: Session): string {
+  return [`# ${date}`, "", DAILY_HEADER, DAILY_DIVIDER, dailySessionRow(session), ""].join("\n");
+}
+
+export function appendDailySession(content: string, session: Session): string {
   const lines = content.split("\n");
-  const headerIdx = lines.findIndex((l) => l.trim() === "## Sessions");
-  if (headerIdx === -1) {
-    const section = ["", "## Sessions", "", SESSIONS_HEADER, SESSIONS_DIVIDER, sessionRow(session)];
-    return content.replace(/\n*$/, "\n") + section.join("\n") + "\n";
-  }
   let lastTableIdx = -1;
-  for (let i = headerIdx + 1; i < lines.length; i++) {
-    const t = lines[i].trim();
-    if (t.startsWith("|")) lastTableIdx = i;
-    else if (t.startsWith("## ")) break;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim().startsWith("|")) lastTableIdx = i;
   }
   if (lastTableIdx === -1) {
-    lines.splice(headerIdx + 1, 0, "", SESSIONS_HEADER, SESSIONS_DIVIDER, sessionRow(session));
-  } else {
-    lines.splice(lastTableIdx + 1, 0, sessionRow(session));
+    return (
+      content.replace(/\n*$/, "\n") +
+      ["", DAILY_HEADER, DAILY_DIVIDER, dailySessionRow(session)].join("\n") +
+      "\n"
+    );
   }
+  lines.splice(lastTableIdx + 1, 0, dailySessionRow(session));
   return lines.join("\n");
 }
 
@@ -133,11 +128,6 @@ export function appendInvoice(content: string, date: string, hours: string): str
   }
   lines.splice(lastIdx + 1, 0, line);
   return lines.join("\n");
-}
-
-export function dailyLogLine(s: Session): string {
-  const note = s.note ? ` — ${s.note.replace(/\n/g, " ")}` : "";
-  return `- ${s.start}–${s.end} (raw ${formatDuration(s.rawMinutes)}, billed ${formatHours(s.billedMinutes)})${note}`;
 }
 
 export function sanitizeProjectName(name: string): string {
