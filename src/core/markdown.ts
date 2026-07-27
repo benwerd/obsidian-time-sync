@@ -1,13 +1,15 @@
 import { Session } from "./types";
 import { formatDuration, formatHours } from "./time";
 
-const FRONTMATTER_RE = /^---\n([\s\S]*?)\n---\n?/;
+const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
 export function parseFrontmatter(content: string): Record<string, string> {
   const match = content.match(FRONTMATTER_RE);
   if (!match) return {};
   const fields: Record<string, string> = {};
-  for (const line of match[1].split("\n")) {
+  for (const line of match[1].split(/\r?\n/)) {
+    // Skip indented continuation lines (they start with whitespace)
+    if (line.match(/^\s/)) continue;
     const idx = line.indexOf(":");
     if (idx === -1) continue;
     const key = line.slice(0, idx).trim();
@@ -21,17 +23,51 @@ export function setFrontmatterFields(
   content: string,
   updates: Record<string, string | number>
 ): string {
-  const merged: Record<string, string> = { ...parseFrontmatter(content) };
-  for (const [key, value] of Object.entries(updates)) merged[key] = String(value);
-  const block =
-    "---\n" +
-    Object.entries(merged)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join("\n") +
-    "\n---\n";
   const match = content.match(FRONTMATTER_RE);
-  if (match) return block + content.slice(match[0].length);
-  return block + "\n" + content;
+
+  // Detect EOL type (CRLF or LF)
+  const eol = content.includes("\r\n") ? "\r\n" : "\n";
+
+  if (!match) {
+    // Create frontmatter when missing
+    const block = "---" + eol +
+      Object.entries(updates)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join(eol) +
+      eol + "---" + eol;
+    return block + eol + content;
+  }
+
+  // Edit existing frontmatter block line-wise
+  const innerContent = match[1];
+  const lines = innerContent.split(/\r?\n/);
+
+  // Process updates: find and replace top-level keys, append new ones
+  const processedKeys = new Set<string>();
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Only process top-level lines (no leading whitespace)
+    if (line.match(/^\s/)) continue;
+
+    const colonIdx = line.indexOf(":");
+    if (colonIdx === -1) continue;
+
+    const key = line.slice(0, colonIdx).trim();
+    if (key in updates) {
+      lines[i] = `${key}: ${updates[key]}`;
+      processedKeys.add(key);
+    }
+  }
+
+  // Append new keys that weren't found
+  for (const [key, value] of Object.entries(updates)) {
+    if (!processedKeys.has(key)) {
+      lines.push(`${key}: ${value}`);
+    }
+  }
+
+  const block = "---" + eol + lines.join(eol) + eol + "---" + eol;
+  return block + content.slice(match[0].length);
 }
 
 const SESSIONS_HEADER = "| Date | Start | End | Raw | Billed | Note |";

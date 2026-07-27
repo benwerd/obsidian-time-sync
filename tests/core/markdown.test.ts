@@ -46,6 +46,28 @@ describe("setFrontmatterFields", () => {
     expect(parseFrontmatter(out)).toEqual({ uninvoiced_minutes: "0" });
     expect(out).toContain("# Bare note");
   });
+
+  it("preserves list-valued frontmatter fields on update", () => {
+    const withTags = `---\nuninvoiced_minutes: 90\ntags:\n  - client-a\n  - billable\ncreated: 2026-06-15\n---\n\n# P\n`;
+    const out = setFrontmatterFields(withTags, { uninvoiced_minutes: 120 });
+    expect(out).toContain("  - client-a");
+    expect(out).toContain("  - billable");
+    expect(parseFrontmatter(out)["uninvoiced_minutes"]).toBe("120");
+    expect(parseFrontmatter(out)["created"]).toBe("2026-06-15");
+  });
+
+  it("updates CRLF files in place without duplicating frontmatter", () => {
+    const crlf = "---\r\nuninvoiced_minutes: 90\r\ncreated: 2026-06-15\r\n---\r\n\r\n# ProjectX\r\n";
+    const out = setFrontmatterFields(crlf, { uninvoiced_minutes: 120 });
+    expect(out.match(/^---/gm)!.length).toBe(2); // exactly one frontmatter block
+    expect(parseFrontmatter(out)["uninvoiced_minutes"]).toBe("120");
+    expect(out).toContain("# ProjectX");
+  });
+
+  it("does not misparse indented continuation lines as keys", () => {
+    const withTags = `---\ntags:\n  - a:b\n---\n\nbody\n`;
+    expect(parseFrontmatter(withTags)).toEqual({ tags: "" });
+  });
 });
 
 const session: Session = {
