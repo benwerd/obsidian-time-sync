@@ -6,3 +6,8 @@ main.js
 docs/superpowers/
 .claude/
 CLAUDE.md
+
+# Editor/IDE metadata
+.idea/
+.vscode/
+.DS_Store
